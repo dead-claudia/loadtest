@@ -1,0 +1,53 @@
+on: [push]
+
+name: CI
+
+env:
+  RUSTFLAGS: "-Dwarnings"
+  RUST_BACKTRACE: full
+
+jobs:
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: shellcheck ./scripts/*.sh
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: cargo clippy --all-targets --all-features
+  unit_tests:
+    needs: clippy
+    name: Unit tests
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - run: cargo test --all-features
+  unix_integ_debug:
+    needs: [unit_tests, shellcheck]
+    name: Integration tests
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - run: cargo build --debug
+      - run: ./scripts/integ-test.sh -p 8080
+  unix_integ_release:
+    needs: unix_integ_debug
+    name: Integration tests
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - run: cargo build --release
+      - run: ./scripts/integ-test.sh -p 8080 -r

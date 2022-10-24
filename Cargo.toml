@@ -1,0 +1,27 @@
+[package]
+name = "loadtest"
+version = "0.1.0"
+edition = "2021"
+authors = ["Claudia Meadows <contact@claudiameadows.dev>"]
+description = "A simple load tester utility."
+repository = "https://github.com/dead-claudia/loadtest"
+license = "Unlicense"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+bytes = "*"
+async-trait = "0.1.58"
+clap = { version = "4.0.18", features = ["derive"] }
+anyhow = "1.0.66"
+
+[dev-dependencies]
+matches = "0.1.9"
+crossbeam-utils = "0.8"
+
+[[bin]]
+# Protect against the package directory itself being renamed. (Rust IMHO is *too* implicit here,
+# and this is an issue I'd rather prevent now than potentially deal with later.)
+name = "loadtest"
+path = "src/main.rs"
