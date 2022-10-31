@@ -179,7 +179,7 @@ impl SocketHooks for SocketWrap {
 
     async fn read(&mut self) -> Result<io::Result<usize>, tokio::time::error::Elapsed> {
         timeout(
-            self._hooks.conn_timeout().into(),
+            self._hooks.conn_timeout(),
             self._socket.read_buf(&mut IgnoreReadBuffer),
         )
         .await

@@ -86,6 +86,7 @@ timeout_pid=$!
 
 exit_code=1
 wait -p waited_pid -n "$timeout_pid" "$client_pid" "$server_pid" || exit_code=$?
+# shellcheck disable=SC2154
 case "$waited_pid" in
     "$timeout_pid")
         timeout_pid=0

@@ -127,11 +127,11 @@ impl<T> CallSpy<T> {
 
     #[allow(unused)]
     pub fn calls(&self) -> usize {
-        return self._calls.current();
+        self._calls.current()
     }
 
     pub fn remaining(&self) -> usize {
-        return self._queue.lock().unwrap().len();
+        self._queue.lock().unwrap().len()
     }
 
     pub fn push(&self, value: T) {
