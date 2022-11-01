@@ -26,11 +26,9 @@ Under the hood, it's all written in [Rust](https://www.rust-lang.org/) and uses 
 
 I primarily developed this on Linux via WSL 2 and have run it on a pure Linux box, so that's where it's most stable.
 
-Additionally, automated testing is performed on the following platforms, using GitHub Actions:
+A best effort is also made to make it run on macOS and Windows, but I can't make any guarantees about its stability.
 
-- Linux
-- MacOS
-- Windows (note: integration tests haven't been ported over yet)
+Automated testing is performed using GitHub Actions across Linux, macOS, and Windows, though testing on Windows is incomplete, so things may be broken there.
 
 ## Building
 

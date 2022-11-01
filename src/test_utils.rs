@@ -11,6 +11,22 @@ use std::{
 
 use crossbeam_utils::atomic::AtomicCell;
 
+pub async fn with_attempts<F, R>(mut n: usize, f: F)
+where
+    F: Fn() -> R + std::panic::UnwindSafe,
+    R: Future<Output = ()> + std::panic::UnwindSafe,
+{
+    while n > 1 {
+        use futures::FutureExt;
+        match f().catch_unwind().await {
+            Ok(()) => return,
+            Err(_) => n -= 1,
+        }
+    }
+
+    f().await
+}
+
 pub fn assert_panics<F: FnOnce() -> R + std::panic::UnwindSafe, R>(f: F, reason: &str) {
     let prev = std::panic::take_hook();
     std::panic::set_hook(Box::new(|_| {}));
@@ -234,6 +250,37 @@ mod test {
     use matches::*;
     use std::cell::RefCell;
     use tokio::io::AsyncWrite;
+
+    #[tokio::test]
+    #[should_panic = "test"]
+    async fn retry_fails_eventually_after_one_attempt() {
+        with_attempts(1, || async { panic!("test") }).await
+    }
+
+    #[tokio::test]
+    #[should_panic = "test"]
+    async fn retry_fails_eventually_after_multiple_attempts() {
+        with_attempts(3, || async { panic!("test") }).await
+    }
+
+    #[tokio::test]
+    async fn retry_attempts_at_least_once() {
+        let attempts = std::sync::Mutex::new(0);
+        with_attempts(3, || async {
+            // Limit the scope so it doesn't get poisoned. (The lock gets poisoned if and only if
+            // a panic occurs while the lock is open.)
+            let attempts = {
+                let mut current = attempts.lock().unwrap();
+                *current += 1;
+                *current
+            };
+            if attempts < 3 {
+                panic!("fail");
+            }
+        })
+        .await;
+        assert_eq!(*attempts.lock().unwrap(), 3);
+    }
 
     #[test]
     fn assert_panics_does_not_panic_on_inner_matching_panic_literal() {

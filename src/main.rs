@@ -24,4 +24,5 @@ async fn main() -> anyhow::Result<()> {
 #[macro_use]
 extern crate matches;
 #[cfg(test)]
+#[macro_use]
 mod test_utils;

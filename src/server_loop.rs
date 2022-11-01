@@ -981,7 +981,7 @@ mod test {
 
         let task = tokio::spawn(timer_loop(server_hooks.clone(), Duration::from_millis(100)));
 
-        tokio::time::sleep(Duration::from_millis(510)).await;
+        tokio::time::sleep(Duration::from_millis(550)).await;
         task.abort();
 
         assert_eq!(
@@ -999,6 +999,36 @@ mod test {
             server_hooks.stats().get_snapshot(Duration::from_millis(1)),
             Some(String::from("0 conns, 0 Kb/s in"))
         );
+
+        // FIXME: This doesn't type-check, due to the inner timer futures holding cells (which make
+        // it not unwind-safe).
+        // ```
+        // with_attempts(3, || async {
+        //     let server_hooks = Arc::new(FakeServerHooks::new());
+        //
+        //     let task = tokio::spawn(timer_loop(server_hooks.clone(), Duration::from_millis(100)));
+        //
+        //     tokio::time::sleep(Duration::from_millis(550)).await;
+        //     task.abort();
+        //
+        //     assert_eq!(
+        //         server_hooks.snapshots(),
+        //         vec![
+        //             String::from("0 conns, 0 Kb/s in"),
+        //             String::from("0 conns, 0 Kb/s in"),
+        //             String::from("0 conns, 0 Kb/s in"),
+        //             String::from("0 conns, 0 Kb/s in"),
+        //             String::from("0 conns, 0 Kb/s in"),
+        //         ]
+        //     );
+        //     assert_eq!(server_hooks.warnings(), vec![]);
+        //     assert_eq!(
+        //         server_hooks.stats().get_snapshot(Duration::from_millis(1)),
+        //         Some(String::from("0 conns, 0 Kb/s in"))
+        //     );
+        // })
+        // .await
+        // ```
     }
 
     #[tokio::test]
@@ -1007,7 +1037,7 @@ mod test {
 
         let task = tokio::spawn(timer_loop(server_hooks.clone(), Duration::from_millis(100)));
 
-        tokio::time::sleep(Duration::from_millis(110)).await;
+        tokio::time::sleep(Duration::from_millis(150)).await;
         server_hooks.stats().add_connection();
         tokio::time::sleep(Duration::from_millis(100)).await;
         server_hooks.stats().push_received_bytes(321);
@@ -1033,5 +1063,43 @@ mod test {
             server_hooks.stats().get_snapshot(Duration::from_millis(1)),
             Some(String::from("0 conns, 0 Kb/s in"))
         );
+
+        // FIXME: This doesn't type-check, due to the inner timer futures holding cells (which make
+        // it not unwind-safe).
+        // ```
+        // with_attempts(3, || async {
+        //     let server_hooks = Arc::new(FakeServerHooks::new());
+        //
+        //     let task = tokio::spawn(timer_loop(server_hooks.clone(), Duration::from_millis(100)));
+        //
+        //     tokio::time::sleep(Duration::from_millis(150)).await;
+        //     server_hooks.stats().add_connection();
+        //     tokio::time::sleep(Duration::from_millis(100)).await;
+        //     server_hooks.stats().push_received_bytes(321);
+        //     tokio::time::sleep(Duration::from_millis(100)).await;
+        //     server_hooks.stats().push_received_bytes(123);
+        //     server_hooks.stats().remove_connection();
+        //     tokio::time::sleep(Duration::from_millis(100)).await;
+        //     tokio::time::sleep(Duration::from_millis(100)).await;
+        //     task.abort();
+        //
+        //     assert_eq!(
+        //         server_hooks.snapshots(),
+        //         vec![
+        //             String::from("0 conns, 0 Kb/s in"),
+        //             String::from("1 conns, 0 Kb/s in"),
+        //             String::from("1 conns, 25 Kb/s in"),
+        //             String::from("0 conns, 9 Kb/s in"),
+        //             String::from("0 conns, 0 Kb/s in"),
+        //         ]
+        //     );
+        //     assert_eq!(server_hooks.warnings(), vec![]);
+        //     assert_eq!(
+        //         server_hooks.stats().get_snapshot(Duration::from_millis(1)),
+        //         Some(String::from("0 conns, 0 Kb/s in"))
+        //     );
+        // })
+        // .await
+        // ```
     }
 }
