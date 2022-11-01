@@ -979,9 +979,9 @@ mod test {
     async fn timer_loop_prints_continuous_zeroes() {
         let server_hooks = Arc::new(FakeServerHooks::new());
 
-        let task = tokio::spawn(timer_loop(server_hooks.clone(), Duration::from_millis(100)));
+        let task = tokio::spawn(timer_loop(server_hooks.clone(), Duration::from_millis(200)));
 
-        tokio::time::sleep(Duration::from_millis(550)).await;
+        tokio::time::sleep(Duration::from_millis(1100)).await;
         task.abort();
 
         assert_eq!(
@@ -1006,9 +1006,9 @@ mod test {
         // with_attempts(3, || async {
         //     let server_hooks = Arc::new(FakeServerHooks::new());
         //
-        //     let task = tokio::spawn(timer_loop(server_hooks.clone(), Duration::from_millis(100)));
+        //     let task = tokio::spawn(timer_loop(server_hooks.clone(), Duration::from_millis(200)));
         //
-        //     tokio::time::sleep(Duration::from_millis(550)).await;
+        //     tokio::time::sleep(Duration::from_millis(1100)).await;
         //     task.abort();
         //
         //     assert_eq!(
@@ -1035,17 +1035,17 @@ mod test {
     async fn timer_loop_reacts_to_connection_changes() {
         let server_hooks = Arc::new(FakeServerHooks::new());
 
-        let task = tokio::spawn(timer_loop(server_hooks.clone(), Duration::from_millis(100)));
+        let task = tokio::spawn(timer_loop(server_hooks.clone(), Duration::from_millis(200)));
 
-        tokio::time::sleep(Duration::from_millis(150)).await;
+        tokio::time::sleep(Duration::from_millis(300)).await;
         server_hooks.stats().add_connection();
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        tokio::time::sleep(Duration::from_millis(200)).await;
         server_hooks.stats().push_received_bytes(321);
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        tokio::time::sleep(Duration::from_millis(200)).await;
         server_hooks.stats().push_received_bytes(123);
         server_hooks.stats().remove_connection();
-        tokio::time::sleep(Duration::from_millis(100)).await;
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        tokio::time::sleep(Duration::from_millis(200)).await;
         task.abort();
 
         assert_eq!(
@@ -1053,8 +1053,8 @@ mod test {
             vec![
                 String::from("0 conns, 0 Kb/s in"),
                 String::from("1 conns, 0 Kb/s in"),
-                String::from("1 conns, 25 Kb/s in"),
-                String::from("0 conns, 9 Kb/s in"),
+                String::from("1 conns, 12 Kb/s in"),
+                String::from("0 conns, 4 Kb/s in"),
                 String::from("0 conns, 0 Kb/s in"),
             ]
         );
@@ -1070,17 +1070,17 @@ mod test {
         // with_attempts(3, || async {
         //     let server_hooks = Arc::new(FakeServerHooks::new());
         //
-        //     let task = tokio::spawn(timer_loop(server_hooks.clone(), Duration::from_millis(100)));
+        //     let task = tokio::spawn(timer_loop(server_hooks.clone(), Duration::from_millis(200)));
         //
-        //     tokio::time::sleep(Duration::from_millis(150)).await;
+        //     tokio::time::sleep(Duration::from_millis(300)).await;
         //     server_hooks.stats().add_connection();
-        //     tokio::time::sleep(Duration::from_millis(100)).await;
+        //     tokio::time::sleep(Duration::from_millis(200)).await;
         //     server_hooks.stats().push_received_bytes(321);
-        //     tokio::time::sleep(Duration::from_millis(100)).await;
+        //     tokio::time::sleep(Duration::from_millis(200)).await;
         //     server_hooks.stats().push_received_bytes(123);
         //     server_hooks.stats().remove_connection();
-        //     tokio::time::sleep(Duration::from_millis(100)).await;
-        //     tokio::time::sleep(Duration::from_millis(100)).await;
+        //     tokio::time::sleep(Duration::from_millis(200)).await;
+        //     tokio::time::sleep(Duration::from_millis(200)).await;
         //     task.abort();
         //
         //     assert_eq!(
