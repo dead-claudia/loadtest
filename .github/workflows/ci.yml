@@ -88,11 +88,11 @@ jobs:
       - run: brew install bash
       - run: cargo build --release
       - run: ./scripts/integ-test.sh -p 8080 -r
-  # windows_unit_tests:
-  #   needs: clippy
-  #   name: Unit tests (windows)
-  #   runs-on: windows-latest
-  #   continue-on-error: true
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - run: cargo test --all-features
+  windows_unit_tests:
+    needs: clippy
+    name: Unit tests (windows)
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v3
+      - run: cargo test --all-features

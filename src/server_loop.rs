@@ -980,7 +980,7 @@ mod test {
             $(
                 // Disable on macOS due to extreme flakiness. See related comment in
                 // `.github/workflows/ci.yml`.
-                #[cfg(not(target_os = "macos"))]
+                #[cfg(not(any(target_os = "macos", target_os = "windows")))]
                 $item
             )*
         };
