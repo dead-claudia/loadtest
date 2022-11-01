@@ -978,8 +978,8 @@ mod test {
     macro_rules! cfg_monotonic_timer_exists {
         ( $( $item:item )* ) => {
             $(
-                // Disable on macOS due to extreme flakiness. See related comment in
-                // `.github/workflows/ci.yml`.
+                // Disable on macOS and Windows as they lack true monotonic clocks. See related
+                // comment in `.github/workflows/ci.yml`.
                 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
                 $item
             )*
@@ -990,10 +990,7 @@ mod test {
         // Try to avoid Mac's lack of a true monotonic timer. Offloading the actual number to the
         // workflow config, with the (relatively fast) preferred default here.
         fn timer_step_millis() -> Duration {
-            match option_env!("TIMER_STEP_MILLIS") {
-                None => Duration::from_millis(100),
-                Some(v) => Duration::from_millis(v.parse().unwrap()),
-            }
+            Duration::from_millis(100)
         }
 
         fn timer_offset_millis() -> Duration {

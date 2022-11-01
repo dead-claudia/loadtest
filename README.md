@@ -24,11 +24,15 @@ Under the hood, it's all written in [Rust](https://www.rust-lang.org/) and uses 
 
 ## Platform support
 
-I primarily developed this on Linux via WSL 2 and have run it on a pure Linux box, so that's where it's most stable.
+Each of the platforms have automated testing, performed using GitHub Actions:
 
-A best effort is also made to make it run on macOS and Windows, but I can't make any guarantees about its stability.
+- Linux
+- macOS
+- Windows (only unit tests, no integration tests)
 
-Automated testing is performed using GitHub Actions across Linux, macOS, and Windows, though testing on Windows is incomplete, so things may be broken there.
+I primarily developed this on Linux via WSL 2, so it definitely works there as well.
+
+> If you want to port the [Linux/macOS integration tests](scripts/integ-test.sh) to PowerShell so they can run in Windows proper, please file a pull request!
 
 ## Building
 
@@ -69,9 +73,9 @@ I do have a few types of contributions I'd specifically like to invite.
 
 **Set up integration tests for Windows**
 
-I currently am only using this on Linux (and am making a best effort to make it runnable on Mac), so it's low priority for me. But if someone wants to port the integration tests to Windows (ideally, using Powershell and its background jobs functionality), I'd love to include it provided tests pass.
+I currently am only using this on Linux (and am only making a best effort to make it runnable on other platforms), so it's low priority for me. But if someone wants to port the integration tests to Windows (ideally, using PowerShell and its background jobs functionality), I'd love to include it.
 
-Note: unit tests should already be running against Windows.
+Note: unit tests are already passing on Windows. This shouldn't be hard for anyone familiar with PowerShell.
 
 **Make the load test able to go in reverse**
 

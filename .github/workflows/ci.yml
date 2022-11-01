@@ -47,29 +47,8 @@ jobs:
     name: Unit tests (macOS)
     runs-on: macos-latest
     steps:
-      # Bunch of stuff here disabled as I was trying to stamp flakiness out while still testing the
-      # timer part (which is now disabled for this platform), and just couldn't. I can't get the
-      # flakiness out even after trying to have it wait a full second (the default prod value!) for
-      # the report interval. ![](this-is-fine.gif) The integration test will still run the code
-      # path, and that part can be easily inspected visually, so it's good enough.
       - uses: actions/checkout@v3
       - run: cargo test --all-features
-      # # No idea why Apple isn't providing a true monotonic clock like everyone else.
-      # # https://github.com/actions/runner-images/issues/820
-      # - run: |
-      #     sudo systemsetup -setusingnetworktime off
-      #     sudo rm -rf /etc/ntp.conf
-      # - uses: nick-fields/retry@v2
-      #   with:
-      #     # Shouldn't ever get this far.
-      #     timeout_minutes: 5
-      #     max_attempts: 3
-      #     retry_wait_seconds: 1
-      #     command: cargo test --all-features
-      #   env:
-      #     # To try to better control the lack of atomicity. This does ultimately slow down the
-      #     # tests significantly, though, so it shouldn't be raised much further.
-      #     TIMER_STEP_MILLIS: 1000
   mac_integ_debug:
     needs: [mac_unit_tests, shellcheck]
     name: Integration tests (macOS, debug)
