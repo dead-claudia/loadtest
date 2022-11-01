@@ -29,7 +29,7 @@ jobs:
   linux_integ_debug:
     needs: [linux_unit_tests, shellcheck]
     name: Integration tests (Ubuntu, debug)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
       - run: cargo build
@@ -37,39 +37,41 @@ jobs:
   linux_integ_release:
     needs: linux_integ_debug
     name: Integration tests (Ubuntu, release)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
       - run: cargo build --release
       - run: ./scripts/integ-test.sh -p 8080 -r
-  mac_unit_tests:
-    needs: clippy
-    name: Unit tests (macOS)
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v3
-      - run: cargo test --all-features
-  mac_integ_debug:
-    needs: [mac_unit_tests, shellcheck]
-    name: Integration tests (macOS, debug)
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v3
-      - run: cargo build
-      - run: ./scripts/integ-test.sh -p 8080
-  mac_integ_release:
-    needs: mac_integ_debug
-    name: Integration tests (macOS, release)
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v3
-      - run: cargo build --release
-      - run: ./scripts/integ-test.sh -p 8080 -r
-  windows_unit_tests:
-    needs: clippy
-    name: Unit tests (windows)
-    runs-on: windows-latest
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v3
-      - run: cargo test --all-features
+  # mac_unit_tests:
+  #   needs: clippy
+  #   name: Unit tests (macOS)
+  #   runs-on: macos-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - run: cargo test --all-features
+  # mac_integ_debug:
+  #   needs: [mac_unit_tests, shellcheck]
+  #   name: Integration tests (macOS, debug)
+  #   runs-on: macos-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - run: sudo apt-get install bash=
+  #     - run: cargo build
+  #     - run: ./scripts/integ-test.sh -p 8080
+  # mac_integ_release:
+  #   needs: mac_integ_debug
+  #   name: Integration tests (macOS, release)
+  #   runs-on: macos-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - run: sudo apt-get install bash=
+  #     - run: cargo build --release
+  #     - run: ./scripts/integ-test.sh -p 8080 -r
+  # windows_unit_tests:
+  #   needs: clippy
+  #   name: Unit tests (windows)
+  #   runs-on: windows-latest
+  #   continue-on-error: true
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - run: cargo test --all-features
