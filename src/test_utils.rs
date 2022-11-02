@@ -4,7 +4,7 @@ use std::{
     pin::Pin,
     sync::{
         atomic::{AtomicUsize, Ordering},
-        Arc,
+        Arc, Mutex,
     },
     task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
 };
@@ -13,18 +13,37 @@ use crossbeam_utils::atomic::AtomicCell;
 
 pub async fn with_attempts<F, R>(mut n: usize, f: F)
 where
-    F: Fn() -> R + std::panic::UnwindSafe,
-    R: Future<Output = ()> + std::panic::UnwindSafe,
+    F: FnMut() -> R + Send + Sync + 'static,
+    R: Future<Output = ()> + Send,
 {
+    // `Arc` since Tokio includes a `'static` bound instead of passing a lifecycle witness around
+    // to ensure it gets properly tracked, and I need the `f` to remain available the whole time.
+    // (This `Arc` essentially functions as a runtime witness.)
+
+    let f = Arc::new(Mutex::new(f));
+
+    let run = |f: Arc<Mutex<F>>| {
+        tokio::spawn(async move {
+            let fut = {
+                let mut f = f.lock().unwrap_or_else(|m| m.into_inner());
+                f()
+            };
+            fut.await
+        })
+    };
+
     while n > 1 {
-        use futures::FutureExt;
-        match f().catch_unwind().await {
-            Ok(()) => return,
-            Err(_) => n -= 1,
+        n -= 1;
+        // Clone before spawning, as futures are lazily run.
+        // Errors are just ignored.
+        if run(f.clone()).await.is_ok() {
+            return;
         }
     }
 
-    f().await
+    if let Err(e) = run(f).await {
+        std::panic::resume_unwind(e.into_panic());
+    }
 }
 
 pub fn assert_panics<F: FnOnce() -> R + std::panic::UnwindSafe, R>(f: F, reason: &str) {
@@ -128,7 +147,7 @@ impl Counter {
 #[derive(Debug)]
 pub struct CallSpy<T> {
     _calls: Counter,
-    _queue: std::sync::Mutex<VecDeque<T>>,
+    _queue: Mutex<VecDeque<T>>,
     _error_msg: String,
 }
 
@@ -136,7 +155,7 @@ impl<T> CallSpy<T> {
     pub fn new<I: Into<String>>(error_message: I) -> CallSpy<T> {
         CallSpy {
             _calls: Counter::new(),
-            _queue: std::sync::Mutex::new(VecDeque::new()),
+            _queue: Mutex::new(VecDeque::new()),
             _error_msg: error_message.into(),
         }
     }
@@ -265,21 +284,22 @@ mod test {
 
     #[tokio::test]
     async fn retry_attempts_at_least_once() {
-        let attempts = std::sync::Mutex::new(0);
-        with_attempts(3, || async {
-            // Limit the scope so it doesn't get poisoned. (The lock gets poisoned if and only if
-            // a panic occurs while the lock is open.)
-            let attempts = {
-                let mut current = attempts.lock().unwrap();
-                *current += 1;
-                *current
-            };
-            if attempts < 3 {
-                panic!("fail");
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let attempts = Arc::new(AtomicUsize::new(0));
+        let own_attempts = attempts.clone();
+        with_attempts(3, move || {
+            // Rust just tries to copy the ref cell when it really needs to be using a clone here,
+            // so this needs to be done here to avoid borrow checker errors.
+            let attempts = attempts.clone();
+            async move {
+                attempts.fetch_add(1, Ordering::SeqCst);
+                if attempts.load(Ordering::SeqCst) < 3 {
+                    panic!("fail");
+                }
             }
         })
         .await;
-        assert_eq!(*attempts.lock().unwrap(), 3);
+        assert_eq!(own_attempts.load(Ordering::SeqCst), 3);
     }
 
     #[test]
@@ -401,11 +421,11 @@ mod test {
     }
 
     // Simplifies the panic checks.
-    struct State<'a>(std::sync::Mutex<RefCell<(TestStream, Context<'a>)>>);
+    struct State<'a>(Mutex<RefCell<(TestStream, Context<'a>)>>);
 
     impl<'a> State<'a> {
         fn guard(stream: TestStream, context: Context<'a>) -> State<'a> {
-            State(std::sync::Mutex::new(RefCell::new((stream, context))))
+            State(Mutex::new(RefCell::new((stream, context))))
         }
 
         fn view<F, R>(&self, f: F) -> R

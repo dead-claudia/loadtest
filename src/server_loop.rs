@@ -1003,130 +1003,68 @@ mod test {
 
         #[tokio::test]
         async fn timer_loop_prints_continuous_zeroes() {
-            let server_hooks = Arc::new(FakeServerHooks::new());
+            with_attempts(3, || async {
+                let server_hooks = Arc::new(FakeServerHooks::new());
 
-            let task = tokio::spawn(timer_loop(server_hooks.clone(), timer_step_millis()));
+                let task = tokio::spawn(timer_loop(server_hooks.clone(), timer_step_millis()));
 
-            tokio::time::sleep(timer_step_millis() * 5 + timer_offset_millis()).await;
-            task.abort();
+                tokio::time::sleep(timer_step_millis() * 5 + timer_offset_millis()).await;
+                task.abort();
 
-            assert_eq!(
-                server_hooks.snapshots(),
-                vec![
-                    String::from("0 conns, 0 Kb/s in"),
-                    String::from("0 conns, 0 Kb/s in"),
-                    String::from("0 conns, 0 Kb/s in"),
-                    String::from("0 conns, 0 Kb/s in"),
-                    String::from("0 conns, 0 Kb/s in"),
-                ]
-            );
-            assert_eq!(server_hooks.warnings(), vec![]);
-            assert_eq!(
-                server_hooks.stats().get_snapshot(Duration::from_millis(1)),
-                Some(String::from("0 conns, 0 Kb/s in"))
-            );
-
-            // FIXME: This doesn't type-check, due to the inner timer futures holding cells (which
-            // make it not unwind-safe).
-            // ```
-            // with_attempts(3, || async {
-            //     let server_hooks = Arc::new(FakeServerHooks::new());
-            //
-            //     let task = tokio::spawn(timer_loop(server_hooks.clone(), timer_step_millis()));
-            //
-            //     tokio::time::sleep(timer_step_millis() * 5 + timer_offset_millis()).await;
-            //     task.abort();
-            //
-            //     assert_eq!(
-            //         server_hooks.snapshots(),
-            //         vec![
-            //             String::from("0 conns, 0 Kb/s in"),
-            //             String::from("0 conns, 0 Kb/s in"),
-            //             String::from("0 conns, 0 Kb/s in"),
-            //             String::from("0 conns, 0 Kb/s in"),
-            //             String::from("0 conns, 0 Kb/s in"),
-            //         ]
-            //     );
-            //     assert_eq!(server_hooks.warnings(), vec![]);
-            //     assert_eq!(
-            //         server_hooks.stats().get_snapshot(Duration::from_millis(1)),
-            //         Some(String::from("0 conns, 0 Kb/s in"))
-            //     );
-            // })
-            // .await
-            // ```
+                assert_eq!(
+                    server_hooks.snapshots(),
+                    vec![
+                        String::from("0 conns, 0 Kb/s in"),
+                        String::from("0 conns, 0 Kb/s in"),
+                        String::from("0 conns, 0 Kb/s in"),
+                        String::from("0 conns, 0 Kb/s in"),
+                        String::from("0 conns, 0 Kb/s in"),
+                    ]
+                );
+                assert_eq!(server_hooks.warnings(), vec![]);
+                assert_eq!(
+                    server_hooks.stats().get_snapshot(Duration::from_millis(1)),
+                    Some(String::from("0 conns, 0 Kb/s in"))
+                );
+            })
+            .await
         }
 
         #[tokio::test]
         async fn timer_loop_reacts_to_connection_changes() {
-            let server_hooks = Arc::new(FakeServerHooks::new());
+            with_attempts(3, || async {
+                let server_hooks = Arc::new(FakeServerHooks::new());
 
-            let task = tokio::spawn(timer_loop(server_hooks.clone(), timer_step_millis()));
+                let task = tokio::spawn(timer_loop(server_hooks.clone(), timer_step_millis()));
 
-            tokio::time::sleep(timer_step_millis() + timer_offset_millis()).await;
-            server_hooks.stats().add_connection();
-            tokio::time::sleep(timer_step_millis()).await;
-            server_hooks.stats().push_received_bytes(bps(2222));
-            tokio::time::sleep(timer_step_millis()).await;
-            server_hooks.stats().push_received_bytes(bps(1111));
-            server_hooks.stats().remove_connection();
-            tokio::time::sleep(timer_step_millis()).await;
-            tokio::time::sleep(timer_step_millis()).await;
-            task.abort();
+                tokio::time::sleep(timer_step_millis() + timer_offset_millis()).await;
+                server_hooks.stats().add_connection();
+                tokio::time::sleep(timer_step_millis()).await;
+                server_hooks.stats().push_received_bytes(bps(2222));
+                tokio::time::sleep(timer_step_millis()).await;
+                server_hooks.stats().push_received_bytes(bps(1111));
+                server_hooks.stats().remove_connection();
+                tokio::time::sleep(timer_step_millis()).await;
+                tokio::time::sleep(timer_step_millis()).await;
+                task.abort();
 
-            assert_eq!(
-                server_hooks.snapshots(),
-                vec![
-                    String::from("0 conns, 0 Kb/s in"),
-                    String::from("1 conns, 0 Kb/s in"),
-                    String::from("1 conns, 17 Kb/s in"),
-                    String::from("0 conns, 8 Kb/s in"),
-                    String::from("0 conns, 0 Kb/s in"),
-                ]
-            );
-            assert_eq!(server_hooks.warnings(), vec![]);
-            assert_eq!(
-                server_hooks.stats().get_snapshot(Duration::from_millis(1)),
-                Some(String::from("0 conns, 0 Kb/s in"))
-            );
-
-            // FIXME: This doesn't type-check, due to the inner timer futures holding cells (which
-            // make it not unwind-safe).
-            // ```
-            // with_attempts(3, || async {
-            //     let server_hooks = Arc::new(FakeServerHooks::new());
-            //
-            //     let task = tokio::spawn(timer_loop(server_hooks.clone(), timer_step_millis()));
-            //
-            //     tokio::time::sleep(timer_step_millis() + timer_offset_millis()).await;
-            //     server_hooks.stats().add_connection();
-            //     tokio::time::sleep(timer_step_millis()).await;
-            //     server_hooks.stats().push_received_bytes(bps(321));
-            //     tokio::time::sleep(timer_step_millis()).await;
-            //     server_hooks.stats().push_received_bytes(bps(123));
-            //     server_hooks.stats().remove_connection();
-            //     tokio::time::sleep(timer_step_millis()).await;
-            //     tokio::time::sleep(timer_step_millis()).await;
-            //     task.abort();
-            //
-            //     assert_eq!(
-            //         server_hooks.snapshots(),
-            //         vec![
-            //             String::from("0 conns, 0 Kb/s in"),
-            //             String::from("1 conns, 0 Kb/s in"),
-            //             String::from("1 conns, 12 Kb/s in"),
-            //             String::from("0 conns, 4 Kb/s in"),
-            //             String::from("0 conns, 0 Kb/s in"),
-            //         ]
-            //     );
-            //     assert_eq!(server_hooks.warnings(), vec![]);
-            //     assert_eq!(
-            //         server_hooks.stats().get_snapshot(Duration::from_millis(1)),
-            //         Some(String::from("0 conns, 0 Kb/s in"))
-            //     );
-            // })
-            // .await
-            // ```
+                assert_eq!(
+                    server_hooks.snapshots(),
+                    vec![
+                        String::from("0 conns, 0 Kb/s in"),
+                        String::from("1 conns, 0 Kb/s in"),
+                        String::from("1 conns, 17 Kb/s in"),
+                        String::from("0 conns, 8 Kb/s in"),
+                        String::from("0 conns, 0 Kb/s in"),
+                    ]
+                );
+                assert_eq!(server_hooks.warnings(), vec![]);
+                assert_eq!(
+                    server_hooks.stats().get_snapshot(Duration::from_millis(1)),
+                    Some(String::from("0 conns, 0 Kb/s in"))
+                );
+            })
+            .await
         }
     }
 }
